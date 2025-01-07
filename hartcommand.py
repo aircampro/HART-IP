@@ -60,8 +60,6 @@ Command74_Response = [
                       0x03,                       #Retry Count to use when sending commands to a sub-device. Valid range is 2 to 5. 3 retries is default.
                      ]
 
-
-
 def CommandRequest_0(): 
     RC = [0]
     ChangeCounter = FillAlign(Device['ChangeCounter'],2)
@@ -98,8 +96,6 @@ def CommandRequest_74():
     Command74_Response[3] = localDetectDeviceNum[0]  
     Command74_Response[4] = localDetectDeviceNum[1] 
     return [len(Command74_Response)+2] + RC + [Device['Status']] + Command74_Response
-
-    
 
 HARTCommandRequestFunction = {'0':CommandRequest_0,
                               '12':CommandRequest_12,
