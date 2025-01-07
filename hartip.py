@@ -1,5 +1,6 @@
 import struct
 from hartcommand import *
+from pprint import pprint
 
 Length = {'Total':8,'VerLen':1,'MesTypeLen':1,'MesIDLen':1,'StatusCodeLen':1,'SeqNumLen':2,'ByteCountLen':2}
 
@@ -16,13 +17,12 @@ SequenceNumber = ''
 ByteCount = ''
 
 
-
 def ReceiveFromSocket(data,client):
     #Calculate the data length from the socket received
     RecLength = len(data)    
     
     RecFmt = str(RecLength)+'B' 
-    print  struct.unpack(RecFmt,data)
+    pprint(struct.unpack(RecFmt,data))
          
     Header = ProcessHeader(data[0:8])
     if Header['Status'] == True:        
@@ -30,7 +30,7 @@ def ReceiveFromSocket(data,client):
         if MesHeader['RecMesType'] == 0:                                 #Request
             
             if MesHeader['RecMesID'] == 0:     #Session Initiate  
-                print 'Session initiate'
+                pprint('Session initiate')
                 SessionReq = {'MasterType':'','InactivityCloseTime':''}
                 ResData =''
                 
@@ -48,7 +48,7 @@ def ReceiveFromSocket(data,client):
                         SessionReq['InactivityCloseTime'] = 100000
                         RC = 8
                     client.settimeout(SessionReq['InactivityCloseTime']/1000)
-                    print 'sesstion timeout is:',SessionReq['InactivityCloseTime']
+                    pprint('session timeout is: %d'%SessionReq['InactivityCloseTime'])
                     
                     #response to initiate 
                     if RC==0:
@@ -57,14 +57,14 @@ def ReceiveFromSocket(data,client):
                 client.send(ResponseToRequest(Version,0,RC,MesHeader['RecSecNum'],ResData))              
             
             elif MesHeader['RecMesID'] == 1:   #Session Close
-                print 'Session Close'
+                pprint('Session Close')
             
             elif MesHeader['RecMesID'] == 2:   #Keep Alive
-                print 'Keep Alive'
+                pprint('Keep Alive')
                 client.send(ResponseToRequest(Version,2,0,MesHeader['RecSecNum'],'')) 
            
             elif MesHeader['RecMesID'] == 3:   #Token-Passing PDU
-                print 'Token-Passing PDU'
+                pprint('Token-Passing PDU')
                 TPLength = MesHeader['RecByteCount'] - 8
                 try:
                     RC,resBinary = ProcessTPPDURequest(data[8:RecLength],client)
@@ -74,10 +74,10 @@ def ReceiveFromSocket(data,client):
                     client.send(ResponseToRequest(Version,3,0,MesHeader['RecSecNum'],resBinary))              
                 
             elif MesHeader['RecMesID'] == 128: #Discovery
-                print 'Discovery'
+                pprint('Discovery')
             
             else:                              #Error occur
-                print 'err message type :'+ MesHeader['RecMesID']
+                pprint('err message type : %s' % MesHeader['RecMesID'])
               
       
         elif MesHeader['RecMesType'] == 1:                               #Response
@@ -87,7 +87,7 @@ def ReceiveFromSocket(data,client):
         elif MesHeader['RecMesType'] == 15:                              #NAK
             pass
         else:                                                            #Error occur
-            print 'err message type :'+ MesHeader['RecMesType']
+            pprint('err message type : %s' % MesHeader['RecMesType'])
         
     
         
@@ -107,7 +107,7 @@ def ProcessHeader(data):
         RecHeader['RecByteCount']  = struct.unpack('!H',data[6:8])[0] 
         Res['Status'] = True
     except Exception as E:
-        print E
+        pprint(E)
     
     return Res
 
@@ -130,7 +130,7 @@ def AssemblePacket(ver,Mestype,MesID,Status,SeqNum,data):
         frame+=struct.pack('!H',length)
         frame+=data
     except Exception as e:
-        print e
+        pprint(e)
     
     return frame
 
@@ -157,13 +157,13 @@ def ProcessTPPDURequest(data,client):
                 recCmdLength = datalist[7]                
                 try:
                     if HARTCommandRequestFunction.has_key(str(recCmdID)):
-                        print 'Command' , recCmdID
+                        pprint('Command %s' % recCmdID)
                         if recCmdLength == 0:
                             resCommand = HARTCommandRequestFunction[str(recCmdID)]()                   
                         else:
                             resCommand = HARTCommandRequestFunction[str(recCmdID)](datalist[7:])
                     else:
-                        print 'No this command',recCmdID
+                        pprint('No this command %s' % recCmdID)
                         resCommand = [64]   # Response Code, No payloads
                 except Exception as e:
                     resCommand = [64]   # problem occur
@@ -176,13 +176,13 @@ def ProcessTPPDURequest(data,client):
                 resList.append(CheckSum(resList))
                 return True,ListToBinary(resList)        
             else:
-                print 'Delimiter is error'
+                pprint('Delimiter is error')
                 return 
         else:   #checksum is error
-            print checksum is error
+            pprint('checksum is error')
             return
     else:
-        print 'wrong request is receive' + Delimiter
+        pprint('wrong request was received %s' % Delimiter)
         return 
     
 def ListToBinary(InputList):
